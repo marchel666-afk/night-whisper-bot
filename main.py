@@ -110,7 +110,7 @@ async def cmd_start(message: Message):
                 await bot.send_message(referrer_id, "🎁 Новый реферал! +5 сообщений.")
             except:
                 pass
-        trial_msg = "🎁 *3 дня полного доступа бесплатно!*\n\n"
+        trial_msg = "🎁 3 дня полного доступа бесплатно!\n\n"
     else:
         lang = user.get("language", lang)
         db.update_last_active(user_id)
@@ -119,23 +119,21 @@ async def cmd_start(message: Message):
         if user.get("trial_until") and not user.get("trial_used"):
             if datetime.fromisoformat(user["trial_until"]) < datetime.now():
                 db.end_trial(user_id)
-                trial_msg = "⏰ *Триал закончился.* Купите Premium для продолжения.\n\n"
+                trial_msg = "⏰ Триал закончился. Купите Premium для продолжения.\n\n"
             else:
-                trial_msg = f"🎁 *Триал до {user['trial_until'][:10]}*\n\n"
+                trial_msg = f"🎁 Триал до {user['trial_until'][:10]}\n\n"
     
     if not is_night_time():
-        await message.answer(i18n.get("not_night", lang), parse_mode="Markdown")
+        await message.answer(i18n.get("not_night", lang))
         return
     
     greeting = i18n.get(get_night_greeting_key(), lang)
     welcome = i18n.get("welcome", lang)
     status = get_access_status(user_id)
     
-    await message.answer(
-        f"{greeting}\n\n{trial_msg}{welcome}\n\nСтатус: {status}",
-        reply_markup=get_main_menu(lang, has_full_access(user_id)),
-        parse_mode="Markdown"
-    )
+    text = f"{greeting}\n\n{trial_msg}{welcome}\n\nСтатус: {status}"
+    
+    await message.answer(text, reply_markup=get_main_menu(lang, has_full_access(user_id)))
 
 @dp.callback_query(F.data == "end_session")
 async def end_session(callback: CallbackQuery):
@@ -156,22 +154,13 @@ async def end_session(callback: CallbackQuery):
         confessional_messages[user_id] = []
         user_sessions.pop(user_id, None)
         
-        await callback.message.edit_text(
-            f"🕯️ *Исповедь завершена*\n\n{deleted} сообщений удалено.\nВсё осталось между нами.",
-            parse_mode="Markdown"
-        )
+        await callback.message.edit_text(f"🕯️ Исповедь завершена\n\n{deleted} сообщений удалено.\nВсё осталось между нами.")
     elif session:
         db.end_session(session["id"])
         user_sessions.pop(user_id, None)
-        await callback.message.edit_text(
-            "✅ Диалог завершён.",
-            reply_markup=get_main_menu(lang, has_full_access(user_id))
-        )
+        await callback.message.edit_text("✅ Диалог завершён.", reply_markup=get_main_menu(lang, has_full_access(user_id)))
     else:
-        await callback.message.edit_text(
-            "Нет активного диалога.",
-            reply_markup=get_main_menu(lang, has_full_access(user_id))
-        )
+        await callback.message.edit_text("Нет активного диалога.", reply_markup=get_main_menu(lang, has_full_access(user_id)))
 
 @dp.callback_query(F.data == "settings")
 async def show_settings(callback: CallbackQuery):
@@ -184,10 +173,7 @@ async def show_settings(callback: CallbackQuery):
 async def set_language(callback: CallbackQuery):
     new_lang = callback.data.split("_")[-1]
     db.set_language(callback.from_user.id, new_lang)
-    await callback.message.edit_text(
-        i18n.get("language_set", new_lang), 
-        reply_markup=get_main_menu(new_lang, has_full_access(callback.from_user.id))
-    )
+    await callback.message.edit_text(i18n.get("language_set", new_lang), reply_markup=get_main_menu(new_lang, has_full_access(callback.from_user.id)))
 
 @dp.callback_query(F.data == "referral")
 async def show_referral(callback: CallbackQuery):
@@ -196,13 +182,9 @@ async def show_referral(callback: CallbackQuery):
     stats = db.get_referral_stats(user_id)
     
     text = referral_system.get_referral_bonus_text(lang)
-    text += f"\n\n`{referral_system.get_referral_link(user_id)}`"
+    text += f"\n\nСсылка: {referral_system.get_referral_link(user_id)}"
     
-    await callback.message.edit_text(
-        text,
-        reply_markup=referral_system.get_referral_keyboard(lang, user_id),
-        parse_mode="Markdown"
-    )
+    await callback.message.edit_text(text, reply_markup=referral_system.get_referral_keyboard(lang, user_id))
 
 @dp.callback_query(F.data == "show_referral_stats")
 async def show_referral_stats(callback: CallbackQuery):
@@ -212,11 +194,7 @@ async def show_referral_stats(callback: CallbackQuery):
     
     text = referral_system.get_referral_stats_text(lang, stats, user_id)
     
-    await callback.message.edit_text(
-        text,
-        reply_markup=referral_system.get_referral_stats_keyboard(lang, user_id),
-        parse_mode="Markdown"
-    )
+    await callback.message.edit_text(text, reply_markup=referral_system.get_referral_stats_keyboard(lang, user_id))
 
 @dp.callback_query(F.data == "back_to_referral")
 async def back_to_referral(callback: CallbackQuery):
@@ -232,19 +210,17 @@ async def back_to_menu(callback: CallbackQuery):
     if user and user.get("trial_until") and not user.get("trial_used"):
         if datetime.fromisoformat(user["trial_until"]) < datetime.now():
             db.end_trial(user_id)
-            trial_msg = "⏰ *Триал закончился.*\n\n"
+            trial_msg = "⏰ Триал закончился.\n\n"
         else:
-            trial_msg = f"🎁 *Триал до {user['trial_until'][:10]}*\n\n"
+            trial_msg = f"🎁 Триал до {user['trial_until'][:10]}\n\n"
     
     greeting = i18n.get(get_night_greeting_key(), lang)
     welcome = i18n.get("welcome", lang)
     status = get_access_status(user_id)
     
-    await callback.message.edit_text(
-        f"{greeting}\n\n{trial_msg}{welcome}\n\nСтатус: {status}",
-        reply_markup=get_main_menu(lang, has_full_access(user_id)),
-        parse_mode="Markdown"
-    )
+    text = f"{greeting}\n\n{trial_msg}{welcome}\n\nСтатус: {status}"
+    
+    await callback.message.edit_text(text, reply_markup=get_main_menu(lang, has_full_access(user_id)))
 
 @dp.callback_query(F.data == "start_chat")
 async def start_chat(callback: CallbackQuery):
@@ -254,10 +230,7 @@ async def start_chat(callback: CallbackQuery):
     if not has_full_access(user_id):
         count = db.check_and_reset_night_counter(user_id)
         if count >= 3:
-            await callback.message.edit_text(
-                i18n.get("limit_reached", lang),
-                reply_markup=get_main_menu(lang, False)
-            )
+            await callback.message.edit_text(i18n.get("limit_reached", lang), reply_markup=get_main_menu(lang, False))
             return
     
     session_id = db.start_session(user_id, is_confessional=False)
@@ -269,11 +242,7 @@ async def start_chat(callback: CallbackQuery):
         "premium_temp": False
     }
     
-    await callback.message.edit_text(
-        i18n.get("chat_started", lang),
-        reply_markup=get_main_menu(lang, has_full_access(user_id), in_session=True),
-        parse_mode="Markdown"
-    )
+    await callback.message.edit_text(i18n.get("chat_started", lang), reply_markup=get_main_menu(lang, has_full_access(user_id), in_session=True))
 
 @dp.callback_query(F.data == "confessional")
 async def start_confessional(callback: CallbackQuery):
@@ -283,13 +252,8 @@ async def start_confessional(callback: CallbackQuery):
     if not has_full_access(user_id):
         limits = check_and_init_limits(user_id)
         if limits["confessional_count"] >= 1:
-            await callback.message.edit_text(
-                f"🚫 *Лимит достигнут*\n\n"
-                f"Режим исповеди: 1 раз за ночь.\n"
-                f"Ваш статус: {get_access_status(user_id)}\n\n"
-                f"Купите Premium (⭐ 150) или разовый сеанс (💫 50) для неограниченного доступа.",
-                reply_markup=get_main_menu(lang, False)
-            )
+            text = f"🚫 Лимит достигнут\n\nРежим исповеди: 1 раз за ночь.\nВаш статус: {get_access_status(user_id)}\n\nКупите Premium (⭐ 150) или разовый сеанс (💫 50)."
+            await callback.message.edit_text(text, reply_markup=get_main_menu(lang, False))
             return
     
     confessional_messages[user_id] = []
@@ -305,11 +269,7 @@ async def start_confessional(callback: CallbackQuery):
     if not has_full_access(user_id):
         user_limits[user_id]["confessional_count"] += 1
     
-    await callback.message.edit_text(
-        i18n.get("confessional_started", lang) + "\n\n⏱️ 40 минут, сообщения удалятся после.",
-        reply_markup=get_main_menu(lang, has_full_access(user_id), in_session=True),
-        parse_mode="Markdown"
-    )
+    await callback.message.edit_text(i18n.get("confessional_started", lang) + "\n\n⏱️ 40 минут, сообщения удалятся после.", reply_markup=get_main_menu(lang, has_full_access(user_id), in_session=True))
 
 @dp.callback_query(F.data == "sleep_story")
 async def generate_story(callback: CallbackQuery):
@@ -319,23 +279,15 @@ async def generate_story(callback: CallbackQuery):
     if not has_full_access(user_id):
         limits = check_and_init_limits(user_id)
         if limits["story_used"]:
-            await callback.message.edit_text(
-                f"🚫 *Лимит достигнут*\n\n"
-                f"Сонная история: 1 раз за ночь.\n"
-                f"Ваш статус: {get_access_status(user_id)}\n\n"
-                f"Купите Premium (⭐ 150) или разовый сеанс (💫 50) для новой истории.",
-                reply_markup=get_main_menu(lang, False)
-            )
+            text = f"🚫 Лимит достигнут\n\nСонная история: 1 раз за ночь.\nВаш статус: {get_access_status(user_id)}\n\nКупите Premium (⭐ 150) или разовый сеанс (💫 50)."
+            await callback.message.edit_text(text, reply_markup=get_main_menu(lang, False))
             return
     
     msg = await callback.message.edit_text(i18n.get("story_generating", lang))
     
     try:
         story = await ai_service.generate_sleep_story(lang)
-        await msg.edit_text(
-            i18n.get("story_ready", lang, text=story),
-            parse_mode="Markdown"
-        )
+        await msg.edit_text(i18n.get("story_ready", lang, text=story))
         
         if not has_full_access(user_id):
             user_limits[user_id]["story_used"] = True
@@ -397,11 +349,7 @@ async def successful_payment(message: Message):
             "start_time": datetime.now(),
             "premium_temp": True
         }
-        await message.answer(
-            i18n.get("session_activated", lang) + "\n\n✨ Нет лимитов!",
-            reply_markup=get_main_menu(lang, True, in_session=True),
-            parse_mode="Markdown"
-        )
+        await message.answer(i18n.get("session_activated", lang) + "\n\n✨ Нет лимитов!", reply_markup=get_main_menu(lang, True, in_session=True))
         db.log_event(user_id, "purchase_session", "50_stars")
 
 @dp.message(F.voice)
@@ -443,7 +391,7 @@ async def handle_voice(message: Message):
         transcribed_text = await ai_service.transcribe_voice(voice_data.read())
         
         if session.get("confessional"):
-            await message.reply(f"🎤 _Распознано: {transcribed_text[:100]}..._", parse_mode="Markdown")
+            await message.reply(f"🎤 Распознано: {transcribed_text[:100]}...")
         
         await process_message(user_id, transcribed_text, is_voice=True)
         
@@ -553,11 +501,7 @@ async def end_session_manual(user_id: int):
         user_sessions.pop(user_id, None)
         
         try:
-            await bot.send_message(
-                user_id,
-                "🕯️ *Исповедь автоматически завершена* (40 мин)\n\nВсе сообщения удалены.",
-                parse_mode="Markdown"
-            )
+            await bot.send_message(user_id, "🕯️ Исповедь автоматически завершена (40 мин)\n\nВсе сообщения удалены.")
         except:
             pass
 
