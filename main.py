@@ -13,6 +13,7 @@ from database import db
 from ai_service import ai_service
 from referral import referral_system, BOT_USERNAME
 from admin_bot import admin_router
+from utils import is_night_time, get_night_greeting_key
 
 logging.basicConfig(level=logging.INFO)
 
@@ -24,55 +25,59 @@ user_sessions = {}
 user_limits = {}
 confessional_messages = {}
 
-# Тексты напрямую (без i18n для надёжности)
+# Тексты
 TEXTS = {
     "ru": {
         "start_chat": "🌙 Начать разговор",
         "confessional": "⛪ Режим исповеди",
         "sleep_story": "📖 Сонная история",
-        "buy_premium": "⭐ Premium (150 ⭐)",
-        "buy_session": "💫 Глубокий сеанс (50 ⭐)",
+        "buy_premium": "⭐ Купить Premium (150 ⭐)",
+        "buy_session": "💫 Разовый сеанс (50 ⭐)",
         "referral": "🎁 Пригласить друга",
         "settings": "⚙️ Язык",
         "end": "❌ Завершить диалог",
-        "welcome": "🌙 Night Whisper\n\nЯ просыпаюсь ночью, чтобы помочь с тревогой и бессонницей.\n\nБесплатно: 3 сообщения, 1 исповедь, 1 история за ночь",
-        "not_night": "🌅 Я сплю до 22:00... Вернусь ночью!",
-        "limit_reached": "🚫 Лимит достигнут!\n\nКупите Premium или разовый сеанс.",
-        "chat_started": "🌙 Разговор начат\n\nЯ слушаю. Пиши или отправляй голосом.",
-        "confessional_started": "⛪ Режим исповеди\n\n40 минут. Сообщения удалятся после. Я ничего не сохраняю.",
-        "story_generating": "🌙 Придумываю историю...",
-        "story_ready": "📖 {text}\n\nЗакрывай глаза и представь это...",
-        "premium_activated": "✨ Premium активирован!\n\nНеограниченные разговоры на месяц.",
+        "welcome": "🌙 Night Whisper — ночной психолог\n\nЯ помогаю с тревогой и бессонницей.\n\n✨ Бесплатно каждую ночь:\n• 3 сообщения в чате\n• 1 режим исповеди\n• 1 сонная история\n\n💰 Premium даёт неограниченный доступ!",
+        "not_night": "🌅 Я сплю с 08:00 до 21:00\n\nВозвращайся вечером — я буду рядом, когда станет тяжело.",
+        "limit_reached": "🚫 Лимит исчерпан!\n\nКупи Premium (150 ⭐/мес) или разовый сеанс (50 ⭐) для продолжения.",
+        "chat_started": "🌙 Разговор начат\n\nЯ слушаю. Пиши текстом или голосом.",
+        "confessional_started": "⛪ Режим исповеди активирован\n\n⏱️ 40 минут\n🗑️ Сообщения удалятся после\n🔒 Я ничего не сохраняю",
+        "story_generating": "🌙 Придумываю сонную историю...",
+        "story_ready": "📖 Сонная история\n\n{text}\n\nЗакрывай глаза и представь это... 🌌",
+        "premium_activated": "✨ Premium активирован!\n\nНеограниченные разговоры на 1 месяц.",
         "session_activated": "💫 Сеанс активирован!\n\n40 минут без лимитов.",
-        "choose_language": "Выберите язык:",
+        "choose_language": "Выбери язык:",
         "language_set": "Язык изменён",
         "night_greeting_22": "🌙 Добрый вечер. Ночь только начинается...",
         "night_greeting_0": "🌌 Глубокая ночь. Ты не один.",
         "night_greeting_5": "🌅 Уже почти утро. Давай разберёмся с тревогами.",
+        "trial_active": "🎁 У тебя 3 дня полного доступа!",
+        "trial_ended": "⏰ Триал закончился. Купи Premium для продолжения.",
     },
     "en": {
         "start_chat": "🌙 Start conversation",
         "confessional": "⛪ Confessional mode",
         "sleep_story": "📖 Sleep story",
-        "buy_premium": "⭐ Premium (150 ⭐)",
-        "buy_session": "💫 Deep session (50 ⭐)",
+        "buy_premium": "⭐ Buy Premium (150 ⭐)",
+        "buy_session": "💫 Single session (50 ⭐)",
         "referral": "🎁 Invite friend",
         "settings": "⚙️ Language",
         "end": "❌ End conversation",
-        "welcome": "🌙 Night Whisper\n\nI wake at night to help with anxiety and insomnia.\n\nFree: 3 messages, 1 confession, 1 story per night",
-        "not_night": "🌅 I sleep until 22:00... See you at night!",
-        "limit_reached": "🚫 Limit reached!\n\nBuy Premium or single session.",
+        "welcome": "🌙 Night Whisper — night psychologist\n\nI help with anxiety and insomnia.\n\n✨ Free every night:\n• 3 chat messages\n• 1 confession\n• 1 sleep story\n\n💰 Premium gives unlimited access!",
+        "not_night": "🌅 I sleep from 08:00 to 21:00\n\nCome back in the evening — I'll be here when it's hard.",
+        "limit_reached": "🚫 Limit reached!\n\nBuy Premium (150 ⭐/month) or single session (50 ⭐) to continue.",
         "chat_started": "🌙 Conversation started\n\nI'm listening. Text or voice.",
-        "confessional_started": "⛪ Confessional mode\n\n40 minutes. Messages will be deleted. I save nothing.",
-        "story_generating": "🌙 Creating story...",
-        "story_ready": "📖 {text}\n\nClose your eyes and imagine...",
-        "premium_activated": "✨ Premium activated!\n\nUnlimited conversations for a month.",
+        "confessional_started": "⛪ Confessional mode activated\n\n⏱️ 40 minutes\n🗑️ Messages will be deleted\n🔒 I save nothing",
+        "story_generating": "🌙 Creating sleep story...",
+        "story_ready": "📖 Sleep story\n\n{text}\n\nClose your eyes and imagine... 🌌",
+        "premium_activated": "✨ Premium activated!\n\nUnlimited conversations for 1 month.",
         "session_activated": "💫 Session activated!\n\n40 minutes without limits.",
         "choose_language": "Choose language:",
         "language_set": "Language changed",
         "night_greeting_22": "🌙 Good evening. The night is just beginning...",
         "night_greeting_0": "🌌 Deep night. You are not alone.",
         "night_greeting_5": "🌅 Almost morning. Let's sort out your worries.",
+        "trial_active": "🎁 You have 3 days of full access!",
+        "trial_ended": "⏰ Trial ended. Buy Premium to continue.",
     }
 }
 
@@ -80,21 +85,14 @@ def get_text(key: str, lang: str = "ru", **kwargs) -> str:
     text = TEXTS.get(lang, TEXTS["ru"]).get(key, key)
     return text.format(**kwargs) if kwargs else text
 
-def get_night_greeting_key():
-    hour = datetime.now().hour
-    if 22 <= hour <= 23:
-        return "night_greeting_22"
-    elif 0 <= hour < 4:
-        return "night_greeting_0"
-    else:
-        return "night_greeting_5"
-
 def get_main_menu(lang: str, is_premium: bool = False, in_session: bool = False):
+    """Главное меню с кнопками покупок для бесплатных пользователей"""
     if in_session:
         return InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text=get_text("end", lang), callback_data="end_session")]
         ])
     
+    # ВСЕГДА показываем кнопки покупок, если не премиум
     buttons = [
         [InlineKeyboardButton(text=get_text("start_chat", lang), callback_data="start_chat")],
         [InlineKeyboardButton(text=get_text("confessional", lang), callback_data="confessional")],
@@ -102,11 +100,10 @@ def get_main_menu(lang: str, is_premium: bool = False, in_session: bool = False)
         [InlineKeyboardButton(text=get_text("referral", lang), callback_data="referral")],
     ]
     
+    # Кнопки покупок для НЕ премиум пользователей
     if not is_premium:
-        buttons.extend([
-            [InlineKeyboardButton(text=get_text("buy_premium", lang), callback_data="buy_premium")],
-            [InlineKeyboardButton(text=get_text("buy_session", lang), callback_data="buy_session")]
-        ])
+        buttons.append([InlineKeyboardButton(text=get_text("buy_premium", lang), callback_data="buy_premium")])
+        buttons.append([InlineKeyboardButton(text=get_text("buy_session", lang), callback_data="buy_session")])
     
     buttons.append([InlineKeyboardButton(text=get_text("settings", lang), callback_data="settings")])
     
@@ -119,6 +116,7 @@ def check_and_init_limits(user_id: int):
     return user_limits[user_id]
 
 def has_full_access(user_id: int) -> bool:
+    """Полный доступ: Premium или Триал или Разовый сеанс"""
     return (
         db.is_premium(user_id) or 
         db.is_trial_active(user_id) or
@@ -133,7 +131,7 @@ def get_access_status(user_id: int) -> str:
         return f"🎁 Триал до {trial_end}"
     elif user_id in user_sessions and user_sessions[user_id].get("premium_temp"):
         return "💫 Разовый сеанс"
-    return "🆓 Бесплатно"
+    return "🆓 Бесплатная версия"
 
 @dp.message(Command("start"))
 async def cmd_start(message: Message):
@@ -146,9 +144,10 @@ async def cmd_start(message: Message):
     
     user = db.get_user(user_id)
     lang = message.from_user.language_code or "ru"
-    if lang not in ["ru", "en", "es", "de"]:
+    if lang not in ["ru", "en"]:
         lang = "ru"
     
+    # Рефералка
     referrer_id = None
     if message.text and len(message.text.split()) > 1:
         start_param = message.text.split()[1]
@@ -162,7 +161,7 @@ async def cmd_start(message: Message):
                 await bot.send_message(referrer_id, "🎁 Новый реферал! +5 сообщений.")
             except:
                 pass
-        trial_msg = "🎁 3 дня полного доступа бесплатно!\n\n"
+        trial_msg = get_text("trial_active", lang) + "\n\n"
     else:
         lang = user.get("language", lang)
         db.update_last_active(user_id)
@@ -171,20 +170,20 @@ async def cmd_start(message: Message):
         if user.get("trial_until") and not user.get("trial_used"):
             if datetime.fromisoformat(user["trial_until"]) < datetime.now():
                 db.end_trial(user_id)
-                trial_msg = "⏰ Триал закончился. Купите Premium.\n\n"
+                trial_msg = get_text("trial_ended", lang) + "\n\n"
             else:
                 trial_msg = f"🎁 Триал до {user['trial_until'][:10]}\n\n"
     
-    # Проверка ночи (временно отключена для теста)
-    # if not is_night_time():
-    #     await message.answer(get_text("not_night", lang))
-    #     return
+    # ПРОВЕРКА НОЧНОГО ВРЕМЕНИ 21:00-08:00
+    if not is_night_time():
+        await message.answer(get_text("not_night", lang))
+        return
     
     greeting = get_text(get_night_greeting_key(), lang)
     welcome = get_text("welcome", lang)
     status = get_access_status(user_id)
     
-    text = f"{greeting}\n\n{trial_msg}{welcome}\n\nСтатус: {status}"
+    text = f"{greeting}\n\n{trial_msg}{welcome}\n\n📊 Статус: {status}"
     
     await message.answer(text, reply_markup=get_main_menu(lang, has_full_access(user_id)))
 
@@ -207,7 +206,7 @@ async def end_session(callback: CallbackQuery):
         confessional_messages[user_id] = []
         user_sessions.pop(user_id, None)
         
-        await callback.message.edit_text(f"🕯️ Исповедь завершена\n\n{deleted} сообщений удалено.")
+        await callback.message.edit_text(f"🕯️ Исповедь завершена\n\n{deleted} сообщений удалено.\nВсё осталось между нами.")
     elif session:
         db.end_session(session["id"])
         user_sessions.pop(user_id, None)
@@ -221,8 +220,6 @@ async def show_settings(callback: CallbackQuery):
     buttons = [
         [InlineKeyboardButton(text="🇷🇺 Русский", callback_data="set_lang_ru")],
         [InlineKeyboardButton(text="🇺🇸 English", callback_data="set_lang_en")],
-        [InlineKeyboardButton(text="🇪🇸 Español", callback_data="set_lang_es")],
-        [InlineKeyboardButton(text="🇩🇪 Deutsch", callback_data="set_lang_de")],
     ]
     await callback.message.edit_text(get_text("choose_language", lang), reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
@@ -239,7 +236,8 @@ async def show_referral(callback: CallbackQuery):
     stats = db.get_referral_stats(user_id)
     
     text = referral_system.get_referral_bonus_text(lang)
-    text += f"\n\nСсылка: {referral_system.get_referral_link(user_id)}"
+    text += f"\n\n🔗 Ссылка: {referral_system.get_referral_link(user_id)}"
+    text += f"\n\n📊 Приглашено: {stats['total']} | Активных: {stats['converted']}"
     
     await callback.message.edit_text(text, reply_markup=referral_system.get_referral_keyboard(lang, user_id))
 
@@ -267,27 +265,41 @@ async def back_to_menu(callback: CallbackQuery):
     if user and user.get("trial_until") and not user.get("trial_used"):
         if datetime.fromisoformat(user["trial_until"]) < datetime.now():
             db.end_trial(user_id)
-            trial_msg = "⏰ Триал закончился.\n\n"
+            trial_msg = get_text("trial_ended", lang) + "\n\n"
         else:
             trial_msg = f"🎁 Триал до {user['trial_until'][:10]}\n\n"
+    
+    # Проверка ночи
+    if not is_night_time():
+        await callback.message.edit_text(get_text("not_night", lang))
+        return
     
     greeting = get_text(get_night_greeting_key(), lang)
     welcome = get_text("welcome", lang)
     status = get_access_status(user_id)
     
-    text = f"{greeting}\n\n{trial_msg}{welcome}\n\nСтатус: {status}"
+    text = f"{greeting}\n\n{trial_msg}{welcome}\n\n📊 Статус: {status}"
     
     await callback.message.edit_text(text, reply_markup=get_main_menu(lang, has_full_access(user_id)))
+
+# ===== МОНЕТИЗАЦИЯ =====
 
 @dp.callback_query(F.data == "start_chat")
 async def start_chat(callback: CallbackQuery):
     user_id = callback.from_user.id
     lang = db.get_language(user_id)
     
+    # Проверка ночи
+    if not is_night_time():
+        await callback.message.edit_text(get_text("not_night", lang))
+        return
+    
+    # ПРОВЕРКА ЛИМИТА для бесплатных
     if not has_full_access(user_id):
         count = db.check_and_reset_night_counter(user_id)
         if count >= 3:
-            await callback.message.edit_text(get_text("limit_reached", lang), reply_markup=get_main_menu(lang, False))
+            text = f"🚫 {get_text('limit_reached', lang)}\n\nВаш статус: {get_access_status(user_id)}"
+            await callback.message.edit_text(text, reply_markup=get_main_menu(lang, False))
             return
     
     session_id = db.start_session(user_id, is_confessional=False)
@@ -306,10 +318,20 @@ async def start_confessional(callback: CallbackQuery):
     user_id = callback.from_user.id
     lang = db.get_language(user_id)
     
+    # Проверка ночи
+    if not is_night_time():
+        await callback.message.edit_text(get_text("not_night", lang))
+        return
+    
+    # ПРОВЕРКА ЛИМИТА: 1 исповедь за ночь
     if not has_full_access(user_id):
         limits = check_and_init_limits(user_id)
         if limits["confessional_count"] >= 1:
-            text = f"🚫 Лимит достигнут\n\nРежим исповеди: 1 раз за ночь.\nВаш статус: {get_access_status(user_id)}\n\nКупите Premium (⭐ 150) или разовый сеанс (💫 50)."
+            text = (
+                f"🚫 Лимит исповеди достигнут!\n\n"
+                f"Ваш статус: {get_access_status(user_id)}\n\n"
+                f"Купите Premium (⭐ 150) или разовый сеанс (💫 50) для неограниченного доступа."
+            )
             await callback.message.edit_text(text, reply_markup=get_main_menu(lang, False))
             return
     
@@ -333,10 +355,20 @@ async def generate_story(callback: CallbackQuery):
     user_id = callback.from_user.id
     lang = db.get_language(user_id)
     
+    # Проверка ночи
+    if not is_night_time():
+        await callback.message.edit_text(get_text("not_night", lang))
+        return
+    
+    # ПРОВЕРКА ЛИМИТА: 1 история за ночь
     if not has_full_access(user_id):
         limits = check_and_init_limits(user_id)
         if limits["story_used"]:
-            text = f"🚫 Лимит достигнут\n\nСонная история: 1 раз за ночь.\nВаш статус: {get_access_status(user_id)}\n\nКупите Premium (⭐ 150) или разовый сеанс (💫 50)."
+            text = (
+                f"🚫 Лимит историй достигнут!\n\n"
+                f"Ваш статус: {get_access_status(user_id)}\n\n"
+                f"Купите Premium (⭐ 150) или разовый сеанс (💫 50) для новой истории."
+            )
             await callback.message.edit_text(text, reply_markup=get_main_menu(lang, False))
             return
     
@@ -353,32 +385,38 @@ async def generate_story(callback: CallbackQuery):
         
     except Exception as e:
         print(f"Story error: {e}")
-        await msg.edit_text("❌ Ошибка генерации.")
+        await msg.edit_text("❌ Ошибка генерации. Попробуйте позже.")
+
+# ===== ПЛАТЕЖИ =====
 
 @dp.callback_query(F.data == "buy_premium")
 async def buy_premium(callback: CallbackQuery):
+    """Покупка Premium"""
     lang = db.get_language(callback.from_user.id)
+    
     await bot.send_invoice(
         chat_id=callback.from_user.id,
         title="⭐ Night Whisper Premium",
-        description="Неограниченные разговоры на 1 месяц",
+        description="Неограниченные разговоры на 1 месяц\n• Без лимитов\n• Приоритетная поддержка",
         payload="premium_1month",
-        provider_token="",
+        provider_token="",  # Пустой для Telegram Stars
         currency="XTR",
-        prices=[LabeledPrice(label="Premium", amount=150)]
+        prices=[LabeledPrice(label="Premium 1 месяц", amount=150)]
     )
 
 @dp.callback_query(F.data == "buy_session")
 async def buy_session(callback: CallbackQuery):
+    """Покупка разового сеанса"""
     lang = db.get_language(callback.from_user.id)
+    
     await bot.send_invoice(
         chat_id=callback.from_user.id,
         title="💫 Глубокий сеанс",
-        description="40 минут без лимитов",
+        description="40 минут без лимитов\n• Неограниченные сообщения\n• Безлимитные истории и исповеди",
         payload="deep_session",
-        provider_token="",
+        provider_token="",  # Пустой для Telegram Stars
         currency="XTR",
-        prices=[LabeledPrice(label="Session", amount=50)]
+        prices=[LabeledPrice(label="Сеанс 40 минут", amount=50)]
     )
 
 @dp.pre_checkout_query()
@@ -387,6 +425,7 @@ async def process_pre_checkout(query):
 
 @dp.message(F.successful_payment)
 async def successful_payment(message: Message):
+    """Обработка успешной оплаты"""
     user_id = message.from_user.id
     lang = db.get_language(user_id)
     payload = message.successful_payment.invoice_payload
@@ -406,14 +445,25 @@ async def successful_payment(message: Message):
             "start_time": datetime.now(),
             "premium_temp": True
         }
-        await message.answer(get_text("session_activated", lang) + "\n\n✨ Нет лимитов!", reply_markup=get_main_menu(lang, True, in_session=True))
+        await message.answer(
+            get_text("session_activated", lang) + "\n\n✨ В сеансе нет лимитов!",
+            reply_markup=get_main_menu(lang, True, in_session=True)
+        )
         db.log_event(user_id, "purchase_session", "50_stars")
+
+# ===== ОБРАБОТКА СООБЩЕНИЙ =====
 
 @dp.message(F.voice)
 async def handle_voice(message: Message):
     user_id = message.from_user.id
     
     if db.is_blocked(user_id):
+        return
+    
+    # Проверка ночи
+    if not is_night_time():
+        lang = db.get_language(user_id)
+        await message.answer(get_text("not_night", lang))
         return
     
     session = user_sessions.get(user_id)
@@ -427,11 +477,12 @@ async def handle_voice(message: Message):
             confessional_messages[user_id] = []
         confessional_messages[user_id].append(message.message_id)
     
+    # Проверка лимитов
     if not has_full_access(user_id) and not session.get("confessional"):
         count = db.check_and_reset_night_counter(user_id)
         if count >= 3:
             lang = db.get_language(user_id)
-            await message.answer(get_text("limit_reached", lang))
+            await message.answer(get_text("limit_reached", lang), reply_markup=get_main_menu(lang, False))
             return
         db.increment_night_counter(user_id)
     
@@ -459,6 +510,12 @@ async def handle_text(message: Message):
     if db.is_blocked(user_id):
         return
     
+    # Проверка ночи
+    if not is_night_time():
+        lang = db.get_language(user_id)
+        await message.answer(get_text("not_night", lang))
+        return
+    
     await process_message(user_id, message.text, is_voice=False, original_message=message)
 
 async def process_message(user_id: int, text: str, is_voice: bool = False, original_message: Message = None):
@@ -477,12 +534,14 @@ async def process_message(user_id: int, text: str, is_voice: bool = False, origi
             confessional_messages[user_id] = []
         confessional_messages[user_id].append(original_message.message_id)
     
+    # Таймер исповеди
     if session.get("confessional"):
         elapsed = datetime.now() - session["start_time"]
         if elapsed > timedelta(minutes=40):
             await end_session_manual(user_id)
             return
     
+    # Проверка лимитов
     is_premium_session = has_full_access(user_id)
     
     if not is_premium_session and not session.get("confessional"):
@@ -571,6 +630,7 @@ async def main():
     web_thread = threading.Thread(target=run_web_server, daemon=True)
     web_thread.start()
     print(f"🌐 Web server started on port {config.WEB_ADMIN_PORT if hasattr(config, 'WEB_ADMIN_PORT') else 10000}")
+    print(f"🕐 Ночной режим: 21:00 - 08:00")
     print(f"✅ Bot @{BOT_USERNAME} started!")
     await dp.start_polling(bot)
 
