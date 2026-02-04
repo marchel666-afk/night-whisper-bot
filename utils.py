@@ -1,21 +1,17 @@
 from datetime import datetime, time
 
 def is_night_time() -> bool:
-    """Ночное время: 21:00 - 08:00"""
-    now = datetime.now().time()
-    start = time(21, 0)  # 21:00
-    end = time(8, 0)     # 08:00
-    
-    if start < end:
-        return start <= now < end
-    else:  # Переход через полночь
-        return now >= start or now < end
+    """Бот работает 24/7 без ограничений по времени"""
+    return True
 
 def get_night_greeting_key() -> str:
+    """Приветствие в зависимости от времени суток"""
     hour = datetime.now().hour
-    if 21 <= hour <= 23:
-        return "night_greeting_22"
-    elif 0 <= hour < 4:
-        return "night_greeting_0"
+    if 5 <= hour < 12:
+        return "morning_greeting"
+    elif 12 <= hour < 18:
+        return "day_greeting"
+    elif 18 <= hour < 22:
+        return "evening_greeting"
     else:
-        return "night_greeting_5"
+        return "night_greeting"
