@@ -1,0 +1,22 @@
+{
+  "welcome": "🌙 *Murmure de Nuit*\n\nJe me réveille quand le monde dort. Si l'anxiété vous empêche de dormir — je suis là.\n\n*Gratuit:* 3 messages par nuit (22h00–06h00)\n*Premium:* Illimité + priorité — ⭐ 150/mois",
+  "not_night": "🌅 Murmure de Nuit dort jusqu'à 22h00...\n\nJe me réveille au coucher du soleil. Si vous avez besoin de parler, laissez un message, je répondrai quand la nuit tombera.",
+  "night_greeting_22": "🌙 Bonsoir. La nuit commence à peine...",
+  "night_greeting_0": "🌌 Nuit profonde. Vous n'êtes pas seul.",
+  "night_greeting_5": "🌅 Bientôt le matin. Résolvons vos soucis avant l'aube.",
+  "start_chat": "🌙 Commencer la conversation",
+  "confessional_mode": "⛪ Mode confessionnal",
+  "sleep_story": "📖 Histoire pour dormir",
+  "buy_premium": "⭐ Premium (150 ⭐/mois)",
+  "buy_session": "💫 Séance profonde (50 ⭐)",
+  "settings": "⚙️ Langue",
+  "limit_reached": "🌙 Vous avez utilisé 3 messages gratuits cette nuit.\n\nPour continuer:\n• Premium — 150 ⭐/mois (illimité)\n• Séance unique — 50 ⭐ (40 min)",
+  "chat_started": "🌙 *Conversation commencée*\n\nJe suis là. Écrivez ou envoyez des messages vocaux. Je répondrai dès que je lirai.\n\n_Après 40 min de silence, la conversation se termine._",
+  "confessional_started": "⛪ *Mode confessionnal activé*\n\nDans ce mode:\n• Rien n'est sauvegardé dans la base de données\n• L'historique est supprimé immédiatement après\n• Vous pouvez dire ce qui pèse sur votre âme\n\n🕯️ J'écoute...",
+  "story_generating": "🌙 Je tisse une histoire pour vous...",
+  "story_ready": "📖 *Histoire pour dormir*\n\n{text}\n\nFermez les yeux et imaginez ceci... 🌌",
+  "premium_activated": "✨ Vous avez maintenant Premium!\n\nConversations illimitées toute la nuit.",
+  "session_activated": "💫 *Séance profonde activée*\n\nVous avez 40 minutes de conversation ininterrompue. Commencez quand vous êtes prêt.",
+  "choose_language": "Choisissez votre langue:",
+  "language_set": "Langue définie: Français 🇫🇷"
+}
