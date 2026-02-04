@@ -10,110 +10,52 @@ class ReferralSystem:
     
     @staticmethod
     def get_referral_keyboard(lang: str, user_id: int) -> InlineKeyboardMarkup:
-        texts = {
-            "ru": {"share": "📤 Поделиться", "stats": "📊 Моя статистика", "back": "🔙 Назад"},
-            "en": {"share": "📤 Share", "stats": "📊 My stats", "back": "🔙 Back"},
-            "es": {"share": "📤 Compartir", "stats": "📊 Mis estadísticas", "back": "🔙 Volver"},
-            "de": {"share": "📤 Teilen", "stats": "📊 Meine Statistik", "back": "🔙 Zurück"}
-        }
-        t = texts.get(lang, texts["en"])
+        # Тексты кнопок
+        share_text = "📤 Поделиться"
+        stats_text = "📊 Моя статистика"
+        back_text = "🔙 Назад"
         
         # Ссылка для шаринга
-        share_text = "🌙 Night Whisper — ночной психолог, который помогает с тревогой и бессонницей. Попробуй бесплатно!"
-        share_url = f"https://t.me/share/url?url={ReferralSystem.get_referral_link(user_id)}&text={share_text}"
+        link = ReferralSystem.get_referral_link(user_id)
+        share_url = f"https://t.me/share/url?url={link}&text=🌙 Night Whisper - ночной психолог"
         
         return InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=t["share"], url=share_url)],
-            [InlineKeyboardButton(text=t["stats"], callback_data="show_referral_stats")],
-            [InlineKeyboardButton(text=t["back"], callback_data="back_to_menu")]
+            [InlineKeyboardButton(text=share_text, url=share_url)],
+            [InlineKeyboardButton(text=stats_text, callback_data="show_referral_stats")],
+            [InlineKeyboardButton(text=back_text, callback_data="back_to_menu")]
         ])
     
     @staticmethod
     def get_referral_stats_keyboard(lang: str, user_id: int) -> InlineKeyboardMarkup:
-        """Клавиатура для возврата со статистики"""
-        texts = {
-            "ru": {"back": "🔙 Назад к рефералам", "menu": "🏠 Главное меню"},
-            "en": {"back": "🔙 Back to referrals", "menu": "🏠 Main menu"},
-            "es": {"back": "🔙 Volver a referidos", "menu": "🏠 Menú principal"},
-            "de": {"back": "🔙 Zurück zu Empfehlungen", "menu": "🏠 Hauptmenü"}
-        }
-        t = texts.get(lang, texts["en"])
-        
         return InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=t["back"], callback_data="back_to_referral")],
-            [InlineKeyboardButton(text=t["menu"], callback_data="back_to_menu")]
+            [InlineKeyboardButton(text="🔙 Назад к рефералам", callback_data="back_to_referral")],
+            [InlineKeyboardButton(text="🏠 Главное меню", callback_data="back_to_menu")]
         ])
     
     @staticmethod
     def get_referral_bonus_text(lang: str) -> str:
         texts = {
-            "ru": """🎁 *Пригласи друга и получи бонусы!*
-
-За каждого друга:
-• +5 бесплатных сообщений сразу
-• +3 дня Premium, если друг купит подписку
-
-Твоя персональная ссылка:""",
-            "en": """🎁 *Invite a friend and get bonuses!*
-
-For each friend:
-• +5 free messages instantly
-• +3 days Premium if they subscribe
-
-Your personal link:""",
-            "es": """🎁 *¡Invita a un amigo y obtén bonos!*
-
-Por cada amigo:
-• +5 mensajes gratis al instante
-• +3 días Premium si se suscriben
-
-Tu enlace personal:""",
-            "de": """🎁 *Lade einen Freund ein und erhalte Boni!*
-
-Pro Freund:
-• +5 kostenlose Nachrichten sofort
-• +3 Tage Premium bei Abonnement
-
-Dein persönlicher Link:"""
+            "ru": "🎁 Пригласи друга и получи бонусы!\n\nЗа каждого друга:\n• +5 бесплатных сообщений\n• +3 дня Premium если купит",
+            "en": "🎁 Invite a friend and get bonuses!\n\nFor each friend:\n• +5 free messages\n• +3 days Premium if they buy",
+            "es": "🎁 Invita a un amigo y obtén bonos!\n\nPor cada amigo:\n• +5 mensajes gratis\n• +3 días Premium si compra",
+            "de": "🎁 Lade einen Freund ein und erhalte Boni!\n\nPro Freund:\n• +5 kostenlose Nachrichten\n• +3 Tage Premium bei Kauf"
         }
         return texts.get(lang, texts["en"])
     
     @staticmethod
     def get_referral_stats_text(lang: str, stats: dict, user_id: int) -> str:
-        """Текст статистики рефералов"""
-        texts = {
-            "ru": """📊 *Ваша реферальная статистика*
+        link = ReferralSystem.get_referral_link(user_id)
+        return f"""📊 Ваша статистика
 
-Приглашено друзей: {total}
-Активных (купили Premium): {converted}
+Приглашено: {stats['total']}
+Активных: {stats['converted']}
 
 Ваши бонусы:
-• +{messages} сообщений за рефералов
-• +{days} дней Premium за конверсии
+• +{stats['total'] * 5} сообщений
+• +{stats['converted'] * 3} дней Premium
 
-Ваша ссылка:
-`{link}`""",
-            "en": """📊 *Your Referral Statistics*
-
-Friends invited: {total}
-Active (bought Premium): {converted}
-
-Your bonuses:
-• +{messages} messages from referrals
-• +{days} days Premium from conversions
-
-Your link:
-`{link}`"""
-        }
-        
-        t = texts.get(lang, texts["en"])
-        return t.format(
-            total=stats['total'],
-            converted=stats['converted'],
-            messages=stats['total'] * 5,
-            days=stats['converted'] * 3,
-            link=ReferralSystem.get_referral_link(user_id)
-        )
+Ссылка:
+{link}"""
     
     @staticmethod
     def parse_referral_start(start_param: str) -> int:

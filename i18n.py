@@ -11,11 +11,17 @@ class I18n:
         self._load_translations()
     
     def _load_translations(self):
+        # Абсолютный путь к папке locales
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        locales_path = os.path.join(base_dir, self.locales_dir)
+        
         for lang in self.supported_langs:
             try:
-                with open(f"{self.locales_dir}/{lang}.json", "r", encoding="utf-8") as f:
+                file_path = os.path.join(locales_path, f"{lang}.json")
+                with open(file_path, "r", encoding="utf-8") as f:
                     self.translations[lang] = json.load(f)
-            except:
+            except Exception as e:
+                print(f"Error loading {lang}: {e}")
                 self.translations[lang] = {}
     
     def get(self, key: str, lang: str = "en", **kwargs) -> str:
